@@ -79,4 +79,4 @@ if 'requests' not in st.session_state:
 def is_action_expired(date_str, is_legacy):
     if is_legacy: return True
     try:
-        leave_date = datetime.strptime(date_str, "%Y-%m-%
+        leave_date = datetime.strptime(date_str, "%Y-%m-%d")
