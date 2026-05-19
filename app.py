@@ -76,7 +76,9 @@ if 'requests' not in st.session_state:
     st.session_state.requests = initial_reqs
 
 # --- 判定異動期限 (七天限制) ---
+# --- 判定異動期限 (七天限制) ---
 def is_action_expired(date_str, is_legacy):
-    if is_legacy: return True
-    try:
-        leave_date = datetime.strptime(date_str, "%Y-%m-%d")
+    if is_legacy or not date_str: 
+        return True
+    leave_date = datetime.strptime(str(date_str), "%Y-%m-%d")
+    return (datetime.now() - leave_date).days > 7
