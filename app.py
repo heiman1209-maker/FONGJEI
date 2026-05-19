@@ -127,7 +127,7 @@ export default function App() {
       }
     }, (err) => console.error("Employee snapshot error", err));
 
-    // 監聽請假紀錄
+    # 監聽請假紀錄
     const unsubRequests = onSnapshot(requestsRef, (snapshot) => {
       if (snapshot.empty) {
         // 第一次啟動：匯入前期紀錄
@@ -146,7 +146,7 @@ export default function App() {
 
   // --- 計算屬性 ---
 
-  // 計算當前登入者數據
+  # 計算當前登入者數據
   const myYearlyStats = useMemo(() => {
     if (!currentUserData) return { totalPossible: 0, used: 0, remaining: 0, carryOver: 0, currentEntitlement: 0 };
     const yearRequests = requests.filter(r => 
