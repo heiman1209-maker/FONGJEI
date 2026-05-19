@@ -318,7 +318,9 @@ export default function App() {
          if st.sidebar.button("📊 進入儀表板"):
     st.session_state.view = 'dashboard'
     st.session_state.view = 'dashboard'
-          <button onClick={() => {setView('apply'); setEditingRequestId(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${view === 'apply' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/5'}`}><Plus className="w-5 h-5" /><span>請假申請</span></button>
+          if st.sidebar.button("📝 填寫請假申請"):
+    st.session_state.view = 'apply'
+    st.session_state.editing_request_id = None
           {currentUserData?.role === 'admin' && (
             <div className="pt-6 mt-6 border-t border-white/10 space-y-2">
               <button onClick={() => setView('employees')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${view === 'employees' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:bg-white/5'}`}><Users className="w-5 h-5" /><span>全公司統計</span></button>
