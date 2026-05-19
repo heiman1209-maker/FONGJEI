@@ -285,7 +285,7 @@ export default function App() {
             {loginError && <p className="text-red-500 text-xs font-bold">{loginError}</p>}
             <button type="submit" className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-black transition-all shadow-xl mt-4">立即進入系統</button>
           </form>
-          <p className="mt-6 text-[10px] text-slate-300 font-bold">初次登入預設密碼為 04698438</p>
+          st.caption("初次登入預設密碼為 04698438")
         </div>
       </div>
     );
