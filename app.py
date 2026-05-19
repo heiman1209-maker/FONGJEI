@@ -117,7 +117,7 @@ export default function App() {
     // 監聽員工資料
     const unsubEmployees = onSnapshot(employeesRef, (snapshot) => {
       if (snapshot.empty) {
-        // 第一次啟動：種子初始化
+        # 第一次啟動：種子初始化
         SEED_EMPLOYEES.forEach(emp => {
           setDoc(doc(employeesRef, emp.id), emp);
         });
