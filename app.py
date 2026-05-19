@@ -315,7 +315,9 @@ export default function App() {
           <h1 className="text-xl font-black tracking-tight uppercase">欣川豐杰</h1>
         </div>
         <nav className="flex-1 space-y-2">
-          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${view === 'dashboard' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/5'}`}><Clock className="w-5 h-5" /><span>特休年度概況</span></button>
+         if st.sidebar.button("📊 進入儀表板"):
+    st.session_state.view = 'dashboard'
+    st.session_state.view = 'dashboard'
           <button onClick={() => {setView('apply'); setEditingRequestId(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${view === 'apply' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/50' : 'text-slate-400 hover:bg-white/5'}`}><Plus className="w-5 h-5" /><span>請假申請</span></button>
           {currentUserData?.role === 'admin' && (
             <div className="pt-6 mt-6 border-t border-white/10 space-y-2">
