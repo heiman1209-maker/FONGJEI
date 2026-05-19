@@ -130,7 +130,7 @@ export default function App() {
     # 監聽請假紀錄
     const unsubRequests = onSnapshot(requestsRef, (snapshot) => {
       if (snapshot.empty) {
-        // 第一次啟動：匯入前期紀錄
+        # 第一次啟動：匯入前期紀錄
         SEED_REQUESTS.forEach(req => {
           setDoc(doc(requestsRef, req.id), req);
         });
