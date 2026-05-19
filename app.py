@@ -210,7 +210,7 @@ export default function App() {
   const triggerMultiNotification = (request, isUpdate = false) => {
     const deputy = employees.find(e => e.id === request.deputyId);
     setEmailNotification({
-      message: `【欣川豐杰】請假${isUpdate ? '修改' : '申請'}通知`,
+      message= `【欣川豐杰】請假${isUpdate ? '修改' : '申請'}通知`,
       manager: MANAGER_EMAIL,
       deputyName: deputy ? deputy.name : null
     });
