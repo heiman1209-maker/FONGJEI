@@ -151,4 +151,4 @@ if st.session_state.view == 'dashboard':
                 if b1.button("📝 修改", key=f"ed_{req['id']}", use_container_width=True):
                     st.session_state.edit_req_id = req['id']; st.session_state.view = 'apply'; st.rerun()
                 if b2.button("🗑️ 刪除", key=f"dl_{req['id']}", use_container_width=True):
-                    st.session_state.requests.remove(
+                   st.session_state.requests.remove(req); st.toast("🗑️ 已成功刪除！"); st.rerun()
