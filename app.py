@@ -45,6 +45,21 @@ def calculate_work_days(start_date, end_date, shift):
         
     return total_days
 
+# --- 判定是否在請假一星期（7天）內，允許修改或刪除 ---
+def is_action_allowed(date_str, is_legacy):
+    if is_legacy: 
+        return False # 歷史匯入數據不允許修改刪除
+    try:
+        # 取出日期的前10個字（適用於單一日期 '2026-05-20' 或區間 '2026-05-20 至 2026-05-22'）
+        base_date_str = date_str.split(" ")[0]
+        leave_date = datetime.strptime(base_date_str, "%Y-%m-%d")
+        # 計算請假首日到今天相差幾天（取絕對值或當前時間對比）
+        days_diff = (datetime.now() - leave_date).days
+        # 如果請假首日在未來，或者過去 7 天內，皆允許操作
+        return days_diff <= 7
+    except:
+        return False
+
 # --- 初始化 Session State（狀態管理） ---
 if 'is_logged_in' not in st.session_state:
     st.session_state.is_logged_in = False
@@ -54,6 +69,8 @@ if 'view' not in st.session_state:
     st.session_state.view = 'dashboard'
 if 'selected_year' not in st.session_state:
     st.session_state.selected_year = START_YEAR
+if 'edit_req_id' not in st.session_state:
+    st.session_state.edit_req_id = None
 
 # 16位員工資料
 if 'employees' not in st.session_state:
@@ -102,10 +119,10 @@ if 'requests' not in st.session_state:
     initial_reqs = []
     for emp_id, dates in legacy_dates.items():
         for d in dates:
-            initial_reqs.append({'id': f"L_{emp_id}_{d}", 'employeeId': emp_id, 'type': '特休', 'date': d, 'shift': '全天', 'days': 1.0, 'status': 'approved', 'isLegacy': True, 'agent': '無'})
+            initial_reqs.append({'id': f"L_{emp_id}_{d}", 'employeeId': emp_id, 'type': '特休', 'date': d, 'shift': '全天', 'days': 1.0, 'status': 'approved', 'isLegacy': True, 'agent': '不需要代理人'})
     for emp_id, dates in legacy_half_dates.items():
         for d in dates:
-            initial_reqs.append({'id': f"L_{emp_id}_H_{d}", 'employeeId': emp_id, 'type': '特休', 'date': d, 'shift': '上午', 'days': 0.5, 'status': 'approved', 'isLegacy': True, 'agent': '無'})
+            initial_reqs.append({'id': f"L_{emp_id}_H_{d}", 'employeeId': emp_id, 'type': '特休', 'date': d, 'shift': '上午', 'days': 0.5, 'status': 'approved', 'isLegacy': True, 'agent': '不需要代理人'})
     st.session_state.requests = initial_reqs
 
 # ==================== 1. 登入介面 ====================
@@ -141,134 +158,6 @@ with st.sidebar:
     st.write("---")
     if st.button("📊 個人功能儀表板", use_container_width=True):
         st.session_state.view = 'dashboard'
+        st.session_state.edit_req_id = None
     if st.button("📝 填寫請假申請單", use_container_width=True):
-        st.session_state.view = 'apply'
-    
-    if current_user['role'] == 'admin':
-        st.write("---")
-        st.markdown("<span style='color:#10B981; font-weight:bold;'>🛠️ 管理員控制台</span>", unsafe_allow_html=True)
-        if st.button("👥 全公司特休統計", use_container_width=True):
-            st.session_state.view = 'employees'
-        pending_count = len([r for r in st.session_state.requests if r['status'] == 'pending'])
-        if st.button(f"📩 待辦審核單據 ({pending_count})", use_container_width=True):
-            st.session_state.view = 'manage'
-            
-    st.write("---")
-    if st.button("🔒 安全登出系統", use_container_width=True):
-        st.session_state.is_logged_in = False
-        st.session_state.current_user = None
-        st.rerun()
-
-# 頂部抬頭
-col_title, col_year = st.columns([3, 1])
-with col_title:
-    st.subheader(f"{current_user['name']}，您好")
-with col_year:
-    st.session_state.selected_year = st.selectbox("追蹤年度", [2026, 2027], index=0)
-
-# 計算個人額度
-used_days = sum([r['days'] for r in st.session_state.requests if r['employeeId'] == current_user['id'] and r['status'] == 'approved' and r['type'] == '特休' and r['date'].startswith(str(st.session_state.selected_year))])
-total_entitlement = current_user['totalAnnual']
-carry_over = current_user['carryOver'] if st.session_state.selected_year == START_YEAR else 0
-total_possible = total_entitlement + carry_over
-remaining_days = total_possible - used_days
-
-# ==================== 3. 功能分頁 ====================
-if st.session_state.view == 'dashboard':
-    st.markdown("#### 📅 當前年度特休權益摘要")
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("當年度新特休", f"{total_entitlement} 天")
-    m2.metric("前一年度結轉", f"{carry_over} 天")
-    m3.metric("審核通過累計已休", f"{used_days} 天")
-    m4.metric("剩餘可用淨額度", f"{remaining_days} 天")
-    
-    st.write("---")
-    st.markdown("#### 📋 個人請假明細紀錄")
-    my_all_reqs = [r for r in st.session_state.requests if r['employeeId'] == current_user['id']]
-    if not my_all_reqs:
-        st.info("目前尚無個人的請假申請紀錄。")
-    else:
-        df_my = pd.DataFrame(my_all_reqs).sort_values(by='date', ascending=False)
-        st.dataframe(df_my[['type', 'date', 'shift', 'days', 'status', 'agent']], use_container_width=True)
-
-elif st.session_state.view == 'apply':
-    st.markdown("#### 📝 填寫請假申請單")
-    
-    # 建立代理人下拉選單（排除自己）
-    agent_options = ["不需要代理人"] + [emp['name'] for emp in sorted(st.session_state.employees, key=lambda x: x['id']) if emp['id'] != current_user['id']]
-    
-    with st.form("leave_form"):
-        l_type = st.selectbox("選擇請假假別", ['特休', '病假', '事假', '公假'])
-        
-        c_date1, c_date2 = st.columns(2)
-        l_start_date = c_date1.date_input("請假開始日期", datetime.now())
-        l_end_date = c_date2.date_input("請假結束日期", datetime.now())
-        
-        l_shift = st.radio("請假時段", ['全天', '上午', '下午'], horizontal=True)
-        
-        # 新增職務代理人選項
-        l_agent = st.selectbox("職務代理人協助協助", agent_options)
-        
-        if st.form_submit_button("計算天數並送出申請"):
-            if l_end_date < l_start_date:
-                st.error("❌ 錯誤：結束日期不能早於開始日期，請重新檢查！")
-            else:
-                days_calc = calculate_work_days(l_start_date, l_end_date, l_shift)
-                
-                if days_calc == 0:
-                    st.warning("⚠️ 您選取的日期區間內全為國定假日或例假日，不需請假！")
-                else:
-                    date_label = f"{l_start_date.strftime('%Y-%m-%d')} 至 {l_end_date.strftime('%Y-%m-%d')}" if l_start_date != l_end_date else l_start_date.strftime('%Y-%m-%d')
-                    
-                    new_req = {
-                        'id': f"R{int(datetime.now().timestamp())}",
-                        'employeeId': current_user['id'],
-                        'type': l_type,
-                        'date': date_label,
-                        'shift': l_shift,
-                        'days': days_calc,
-                        'status': 'pending',
-                        'isLegacy': False,
-                        'agent': l_agent
-                    }
-                    st.session_state.requests.append(new_req)
-                    st.success(f"🎉 申請成功！扣除週末及國定假日後，本次共請假 **{days_calc}** 天，已送交審核。")
-                    st.session_state.view = 'dashboard'
-                    st.rerun()
-
-elif st.session_state.view == 'employees' and current_user['role'] == 'admin':
-    st.markdown("#### 👥 全公司特休總額度統計")
-    summary_data = []
-    for emp in st.session_state.employees:
-        emp_used = 0.0
-        for r in st.session_state.requests:
-            if r['employeeId'] == emp['id'] and r['status'] == 'approved' and r['type'] == '特休' and str(st.session_state.selected_year) in r['date']:
-                emp_used += r['days']
-                
-        emp_carry = emp['carryOver'] if st.session_state.selected_year == START_YEAR else 0
-        summary_data.append({
-            '工號': emp['id'], '姓名': emp['name'], '部門': emp['department'],
-            '年度新假': emp['totalAnnual'], '上年結轉': emp_carry,
-            '總額度': emp['totalAnnual'] + emp_carry, '已休累計': emp_used,
-            '剩餘可休': (emp['totalAnnual'] + emp_carry) - emp_used
-        })
-    st.dataframe(pd.DataFrame(summary_data), use_container_width=True)
-
-elif st.session_state.view == 'manage' and current_user['role'] == 'admin':
-    st.markdown("#### 📩 待審核單據管理")
-    pending_list = [r for r in st.session_state.requests if r['status'] == 'pending']
-    if not pending_list:
-        st.info("🎉 暫無任何需要審核的假單。")
-    else:
-        for req in pending_list:
-            emp_info = next((e for e in st.session_state.employees if e['id'] == req['employeeId']), None)
-            st.write(f"**申請人:** {emp_info['name']} ｜ **假別:** {req['type']} ｜ **期間/日期:** {req['date']} ({req['shift']} ｜ 共 {req['days']} 天)")
-            st.write(f"**職務代理人:** {req['agent']}")
-            c1, c2 = st.columns(2)
-            if c1.button("✅ 核准", key=f"ok_{req['id']}"):
-                req['status'] = 'approved'
-                st.rerun()
-            if c2.button("❌ 駁回", key=f"no_{req['id']}"):
-                req['status'] = 'rejected'
-                st.rerun()
-            st.write("---")
+        st.session_state.view =
