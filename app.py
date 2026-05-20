@@ -127,7 +127,7 @@ with st.sidebar:
     # 管理員專屬功能區
     if current_user['role'] == 'admin':
         st.write("---")
-        st.markdown("<span style='color:#10B981; font-weight:bold;'>🛠️ 管理員控制台</span>", unsafe_style_html=True)
+       st.markdown("<span style='color:#10B981; font-weight:bold;'>🛠️ 管理員控制台</span>", unsafe_allow_html=True)
         if st.button("👥 全公司特休統計", use_container_width=True):
             st.session_state.view = 'employees'
         pending_count = len([r for r in st.session_state.requests if r['status'] == 'pending'])
