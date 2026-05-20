@@ -151,4 +151,55 @@ if st.session_state.view == 'dashboard':
                 if b1.button("📝 修改", key=f"ed_{req['id']}", use_container_width=True):
                     st.session_state.edit_req_id = req['id']; st.session_state.view = 'apply'; st.rerun()
                 if b2.button("🗑️ 刪除", key=f"dl_{req['id']}", use_container_width=True):
-                   st.session_state.requests.remove(req); st.toast("🗑️ 已成功刪除！"); st.rerun()
+                    st.session_state.requests.remove(req); st.toast("🗑️ 已成功刪除！"); st.rerun()
+            else: c7.caption("🔒 已超過1星期鎖定")
+
+elif st.session_state.view == 'apply':
+    is_editing = st.session_state.edit_req_id is not None
+    target_req = next((r for r in st.session_state.requests if r['id'] == st.session_state.edit_req_id), None) if is_editing else None
+    st.markdown(f"#### 📝 {'修改' if is_editing else '填寫'}請假申請單")
+    agents = ["不需要代理人"] + [e['name'] for e in sorted(st.session_state.employees, key=lambda x: x['id']) if e['id'] != current_user['id']]
+    
+    l_type = st.selectbox("選擇請假假別", ['特休', '病假', '事假', '公假'], index=['特休', '病假', '事假', '公假'].index(target_req['type'] if is_editing else '特休'))
+    c_d1, c_d2 = st.columns(2)
+    l_start = c_d1.date_input("請假開始日期", datetime.now())
+    l_end = c_d2.date_input("請假結束日期", value=l_start)
+    l_shift = st.radio("請假時段", ['全天', '上午', '下午'], index=['全天', '上午', '下午'].index(target_req['shift'] if is_editing else '全天'), horizontal=True)
+    l_agent = st.selectbox("職務代理人協助", agents, index=agents.index(target_req['agent'] if is_editing and target_req['agent'] in agents else "不需要代理人"))
+    
+    if st.button("🚀 確認送出假單", use_container_width=True, key="form_submit"):
+        if l_end < l_start: st.error("❌ 結束日期不能早於開始日期！")
+        else:
+            days = calculate_work_days(l_start, l_end, l_shift)
+            if days == 0: st.warning("⚠️ 期間內均為例假日，不需請假。")
+            else:
+                lbl = f"{l_start.strftime('%Y-%m-%d')} 至 {l_end.strftime('%Y-%m-%d')}" if l_start != l_end else l_start.strftime('%Y-%m-%d')
+                if is_editing and target_req:
+                    target_req.update({'type': l_type, 'date': lbl, 'shift': l_shift, 'days': days, 'agent': l_agent, 'status': 'pending'})
+                    st.toast("🎉 假單修改成功，已重新送交審核！")
+                else:
+                    st.session_state.requests.append({'id': f"R{int(datetime.now().timestamp())}", 'employeeId': current_user['id'], 'type': l_type, 'date': lbl, 'shift': l_shift, 'days': days, 'status': 'pending', 'isLegacy': False, 'agent': l_agent})
+                    st.toast(f"🎉 請假申請成功！本次共計 **{days}** 天，已送交審核。")
+                st.session_state.edit_req_id = None; st.session_state.view = 'dashboard'; st.rerun()
+
+elif st.session_state.view == 'employees' and current_user['role'] == 'admin':
+    st.markdown("#### 👥 全公司特休總額度統計")
+    s_data = []
+    for emp in st.session_state.employees:
+        emp_used = sum([r['days'] for r in st.session_state.requests if r['employeeId'] == emp['id'] and r['status'] == 'approved' and r['type'] == '特休' and str(st.session_state.selected_year) in r['date']])
+        carry = emp['carryOver'] if st.session_state.selected_year == START_YEAR else 0
+        s_data.append({'工號': emp['id'], '姓名': emp['name'], '部門': emp['department'], '年度新假': emp['totalAnnual'], '上年結轉': carry, '總額度': emp['totalAnnual'] + carry, '已休累計': emp_used, '剩餘可休': (emp['totalAnnual'] + carry) - emp_used})
+    st.dataframe(pd.DataFrame(s_data), use_container_width=True)
+
+elif st.session_state.view == 'manage' and current_user['role'] == 'admin':
+    st.markdown("#### 📩 待審核單據管理")
+    p_list = [r for r in st.session_state.requests if r['status'] == 'pending']
+    if not p_list: st.info("🎉 暫無任何需要審核的假單。")
+    else:
+        for req in p_list:
+            emp = next((e for e in st.session_state.employees if e['id'] == req['employeeId']), None)
+            st.write(f"**申請人:** {emp['name']} ｜ **假別:** {req['type']} ｜ **期間:** {req['date']} ({req['shift']} ｜ 共 {req['days']} 天) ｜ **代理人:** {req['agent']}")
+            ca, cr = st.columns(2)
+            if ca.button("✅ 核准", key=f"ok_{req['id']}", use_container_width=True): req['status'] = 'approved'; st.rerun()
+            if cr.button("❌ 駁回", key=f"no_{req['id']}", use_container_width=True): req['status'] = 'rejected'; st.rerun()
+            st.write("---")
