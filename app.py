@@ -159,5 +159,5 @@ with st.sidebar:
     if st.button("📊 個人功能儀表板", use_container_width=True):
         st.session_state.view = 'dashboard'
         st.session_state.edit_req_id = None
-    if st.button("📝 填寫請假申請單", use_container_width=True):
-        st.session_state.view =
+    if st.button("📊 個人功能儀表板", use_container_width=True):
+       st.session_state.view = 'dashboard'
