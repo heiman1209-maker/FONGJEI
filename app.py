@@ -74,7 +74,7 @@ if 'requests' not in st.session_state:
 
 # ==================== 1. 登入介面 ====================
 if not st.session_state.is_logged_in:
-    st.markdown("<h2 style='text-align: center; color: #10B981;'>欣川豐杰請假系統</h2>", unsafe_style_html=True)
+    st.markdown("<h2 style='text-align: center; color: #10B981;'>欣川豐杰請假系統</h2>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
