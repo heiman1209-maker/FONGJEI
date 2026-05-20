@@ -1,13 +1,52 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+import datetime
+from datetime import datetime, timedelta
 
-# 1. 網頁基本配置（必須是除了註解以外的第一行 Python 程式碼）
+# 1. 網頁基本配置
 st.set_page_config(page_title="欣川豐杰請假系統", page_icon="📊", layout="wide")
 
 # --- 常數設定 ---
 DEFAULT_PASSWORD = '04698438'
 START_YEAR = 2026
+
+# --- 2026 年台灣主要國定假日對照表 (用於自動扣除) ---
+HOLIDAYS_2026 = {
+    "2026-01-01", # 元旦
+    "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", # 春節連假
+    "2026-02-27", # 228連假調整
+    "2026-02-28", # 和平紀念日
+    "2026-04-02", "2026-04-03", # 兒童節與清明節連假
+    "2026-05-01", # 勞動節 (勞工放假)
+    "2026-06-19", # 端午節連假調整
+    "2026-06-20", # 端午節
+    "2026-09-25", # 中秋節
+    "2026-10-09", # 國慶日連假調整
+    "2026-10-10", # 國慶日
+}
+
+# --- 計算實際請假天數（扣除六日與國定假日） ---
+def calculate_work_days(start_date, end_date, shift):
+    # 如果是請半天，直接固定為 0.5 天（不跨天）
+    if shift in ['上午', '下午']:
+        return 0.5
+        
+    current_date = start_date
+    total_days = 0.0
+    
+    while current_date <= end_date:
+        date_str = current_date.strftime("%Y-%m-%d")
+        # 檢查是否為星期六(5)或星期日(6)，以及是否為國定假日
+        is_weekend = current_date.weekday() >= 5
+        is_holiday = date_str in HOLIDAYS_2026
+        
+        # 如果既不是週末也不是國定假日，才算一天上班日
+        if not is_weekend and not is_holiday:
+            total_days += 1.0
+            
+        current_date += timedelta(days=1)
+        
+    return total_days
 
 # --- 初始化 Session State（狀態管理） ---
 if 'is_logged_in' not in st.session_state:
@@ -143,7 +182,7 @@ if st.session_state.view == 'dashboard':
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("當年度新特休", f"{total_entitlement} 天")
     m2.metric("前一年度結轉", f"{carry_over} 天")
-    m3.metric("累計已休天數", f"{used_days} 天")
+    m3.metric("審核通過累計已休", f"{used_days} 天")
     m4.metric("剩餘可用淨額度", f"{remaining_days} 天")
     
     st.write("---")
@@ -156,36 +195,56 @@ if st.session_state.view == 'dashboard':
         st.dataframe(df_my[['type', 'date', 'shift', 'days', 'status', 'reason']], use_container_width=True)
 
 elif st.session_state.view == 'apply':
-    st.markdown("#### 📝 填寫請假申請單")
+    st.markdown("#### 📝 填寫請假申請單（支援多天連續請假）")
     with st.form("leave_form"):
         l_type = st.selectbox("選擇請假假別", ['特休', '病假', '事假', '公假'])
-        l_date = st.date_input("請假日期")
-        l_shift = st.radio("請假時段", ['全天', '上午', '下午'], horizontal=True)
+        
+        # 改為日期區間選擇
+        c_date1, c_date2 = st.columns(2)
+        l_start_date = c_date1.date_input("請假開始日期", datetime.now())
+        l_end_date = c_date2.date_input("請假結束日期", datetime.now())
+        
+        l_shift = st.radio("請假時段（注意：選擇上午/下午將固定計算為 0.5 天，不支援跨天單一勾選）", ['全天', '上午', '下午'], horizontal=True)
         l_reason = st.text_area("請假具體事由")
         
-        if st.form_submit_button("送出申請"):
-            days_calc = 1.0 if l_shift == '全天' else 0.5
-            new_req = {
-                'id': f"R{int(datetime.now().timestamp())}",
-                'employeeId': current_user['id'],
-                'type': l_type,
-                'date': l_date.strftime("%Y-%m-%d"),
-                'shift': l_shift,
-                'days': days_calc,
-                'status': 'pending',
-                'isLegacy': False,
-                'reason': l_reason
-            }
-            st.session_state.requests.append(new_req)
-            st.success("🎉 申請已成功送出，請靜候後台審核。")
-            st.session_state.view = 'dashboard'
-            st.rerun()
+        if st.form_submit_button("計算天數並送出申請"):
+            if l_end_date < l_start_date:
+                st.error("❌ 錯誤：結束日期不能早於開始日期，請重新檢查！")
+            else:
+                # 呼叫自動扣除六日、節假日的計算函式
+                days_calc = calculate_work_days(l_start_date, l_end_date, l_shift)
+                
+                if days_calc == 0:
+                    st.warning("⚠️ 您選取的日期區間內全為國定假日或例假日，不需請假！")
+                else:
+                    date_label = f"{l_start_date.strftime('%Y-%m-%d')} 至 {l_end_date.strftime('%Y-%m-%d')}" if l_start_date != l_end_date else l_start_date.strftime('%Y-%m-%d')
+                    
+                    new_req = {
+                        'id': f"R{int(datetime.now().timestamp())}",
+                        'employeeId': current_user['id'],
+                        'type': l_type,
+                        'date': date_label,
+                        'shift': l_shift,
+                        'days': days_calc,
+                        'status': 'pending',
+                        'isLegacy': False,
+                        'reason': l_reason
+                    }
+                    st.session_state.requests.append(new_req)
+                    st.success(f"🎉 申請成功！扣除週末及國定假日後，本次共請假 **{days_calc}** 天，已送交審核。")
+                    st.session_state.view = 'dashboard'
+                    st.rerun()
 
 elif st.session_state.view == 'employees' and current_user['role'] == 'admin':
     st.markdown("#### 👥 全公司特休總額度統計")
     summary_data = []
     for emp in st.session_state.employees:
-        emp_used = sum([r['days'] for r in st.session_state.requests if r['employeeId'] == emp['id'] and r['status'] == 'approved' and r['type'] == '特休' and r['date'].startswith(str(st.session_state.selected_year))])
+        # 優化判定邏輯：過濾包含年份標籤的假單
+        emp_used = 0.0
+        for r in st.session_state.requests:
+            if r['employeeId'] == emp['id'] and r['status'] == 'approved' and r['type'] == '特休' and str(st.session_state.selected_year) in r['date']:
+                emp_used += r['days']
+                
         emp_carry = emp['carryOver'] if st.session_state.selected_year == START_YEAR else 0
         summary_data.append({
             '工號': emp['id'], '姓名': emp['name'], '部門': emp['department'],
@@ -203,7 +262,7 @@ elif st.session_state.view == 'manage' and current_user['role'] == 'admin':
     else:
         for req in pending_list:
             emp_info = next((e for e in st.session_state.employees if e['id'] == req['employeeId']), None)
-            st.write(f"**申請人:** {emp_info['name']} ｜ **假別:** {req['type']} ｜ **日期:** {req['date']} ({req['shift']}共 {req['days']} 天)")
+            st.write(f"**申請人:** {emp_info['name']} ｜ **假別:** {req['type']} ｜ **期間/日期:** {req['date']} ({req['shift']} ｜ 共 {req['days']} 天)")
             st.write(f"**事由:** {req['reason']}")
             c1, c2 = st.columns(2)
             if c1.button("✅ 核准", key=f"ok_{req['id']}"):
