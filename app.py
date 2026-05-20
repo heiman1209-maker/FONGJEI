@@ -134,4 +134,9 @@ if not st.session_state.is_logged_in:
         password_input = st.text_input("輸入登入密碼", type="password", placeholder="••••••••", key="login_pwd_input")
         
         if st.button("立即進入系統", use_container_width=True, key="login_submit_btn"):
-            if selected_emp
+            if selected_emp_label != "請選擇員工...":
+                user_data = emp_options[selected_emp_label]
+                if password_input == user_data['password']:
+                    st.session_state.is_logged_in = True
+                    st.session_state.current_user = user_data
+                    st.rerun()
