@@ -103,6 +103,13 @@ if st.session_state.view == 'dashboard':
                 if b1.button("📝 修改", key=f"ed_{r['id']}", use_container_width=True): st.session_state.edit_req_id, st.session_state.view = r['id'], 'apply'; st.rerun()
                 if b2.button("🗑️ 刪除", key=f"dl_{r['id']}", use_container_width=True): st.session_state.requests.remove(r); st.toast("🗑️ 已成功刪除！"); st.rerun()
             else: c7.caption("🔒 已超過1星期鎖定")
+    st.write("---")
+    st.markdown("#### 🔒 修改個人登入密碼")
+    c_p1, c_p2 = st.columns([2, 1])
+    new_pwd = c_p1.text_input("輸入您想設定的新密碼", type="password", key="new_pwd_input", placeholder="請輸入新密碼...")
+    if c_p2.button("💾 確認修改密碼", use_container_width=True, key="change_pwd_btn") and new_pwd:
+        next(e for e in st.session_state.employees if e['id'] == u['id'])['password'] = new_pwd
+        st.toast("🎉 密碼修改成功！下次登入請使用新密碼。")
 
 elif st.session_state.view == 'apply':
     is_ed = st.session_state.edit_req_id is not None
@@ -132,29 +139,4 @@ elif st.session_state.view == 'employees' and u['role'] == 'admin':
     for emp in st.session_state.employees:
         emp_used = sum([r['days'] for r in st.session_state.requests if r['employeeId'] == emp['id'] and r['status'] == 'approved' and r['type'] == '特休' and str(st.session_state.selected_year) in r['date']])
         carry = emp['carryOver'] if st.session_state.selected_year == START_YEAR else 0
-        s_data.append({'工號': emp['id'], '姓名': emp['name'], '部門': emp['department'], '年度新假': emp['totalAnnual'], '上年結轉': carry, '總額度': emp['totalAnnual'] + carry, '已休累計': emp_used, '剩餘可休': (emp['totalAnnual'] + carry) - emp_used})
-    st.dataframe(pd.DataFrame(s_data), use_container_width=True)
-    st.write("---")
-    st.markdown("#### 🔍 員工個別請假詳細內容查詢")
-    emp_map = {f"{e['id']} - {e['name']}": e for e in sorted(st.session_state.employees, key=lambda x: x['id'])}
-    sel_q = st.selectbox("選擇要查詢的員工姓名", ["請選擇員工..."] + list(emp_map.keys()), key="q_emp")
-    if sel_q != "請選擇員工...":
-        t_emp = emp_map[sel_q]
-        e_list = [r for r in st.session_state.requests if r['employeeId'] == t_emp['id']]
-        if not e_list: st.info(f"💡 員工 【{t_emp['name']}】 目前尚無請假紀錄。")
-        else:
-            q_df = [{'假別': r['type'], '請假期間': r['date'], '時段': r['shift'], '扣除天數': f"{r['days']} 天", '狀態': {'approved': '🟢 已核准', 'pending': '🟡 待審核', 'rejected': '🔴 已駁回'}.get(r['status'], r['status']), '職務代理人': r['agent']} for r in sorted(e_list, key=lambda x: x['date'], reverse=True)]
-            st.dataframe(pd.DataFrame(q_df), use_container_width=True)
-
-elif st.session_state.view == 'manage' and u['role'] == 'admin':
-    st.markdown("#### 📩 待審核單據管理")
-    p_list = [r for r in st.session_state.requests if r['status'] == 'pending']
-    if not p_list: st.info("🎉 暫無任何需要審核的假單。")
-    else:
-        for r in p_list:
-            emp = next((e for e in st.session_state.employees if e['id'] == r['employeeId']), None)
-            st.write(f"**申請人:** {emp['name']} ｜ **假別:** {r['type']} ｜ **期間:** {r['date']} ({r['shift']} ｜ 共 {r['days']} 天) ｜ **代理人:** {r['agent']}")
-            ca, cr = st.columns(2)
-            if ca.button("✅ 核准", key=f"ok_{r['id']}", use_container_width=True): r['status'] = 'approved'; st.rerun()
-            if cr.button("❌ 駁回", key=f"no_{r['id']}", use_container_width=True): r['status'] = 'rejected'; st.rerun()
-            st.write("---")
+        s_data.append({'工號': emp['id'], '姓名': emp['name'], '部門': emp['department'], '年度新假': emp['totalAnnual'], '上年結轉': carry, '總額度': emp['totalAnnual']
