@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as stimport streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -43,8 +43,8 @@ if 'employees' not in st.session_state:
     ]
 
 if 'requests' not in st.session_state:
-    reqs, legacy = [], {'E002': (['2026-01-29', '2026-02-26', '2026-03-18', '2026-03-30', '2026-04-16'], []), 'E005': (['2026-03-12', '2026-03-18', '2026-03-27', '2026-04-23'], []), 'E006': (['2026-01-13', '2026-01-16', '2026-01-23', '2026-02-09', '2026-03-05', '2026-03-13'], ['2026-01-09', '2026-01-30', '2026-02-06', '2026-03-03', '2026-03-27']), 'E007': (['2026-01-21', '2026-02-12', '2026-03-02', '2026-03-03', '2026-03-27', '2026-04-20'], ['2026-01-16', '2026-01-19', '2026-01-20', '2026-03-20', '2026-03-23', '2026-04-28']), 'E008': (['2026-04-02', '2026-04-14', '2026-04-15'], ['2026-03-17', '2026-03-20', '2026-03-27', '2026-04-21', '2026-04-28', '2026-04-30']), 'E011': (['2026-03-16', '2026-03-23', '2026-03-30', '2026-04-20'], ['2026-01-16', '2026-02-05', '2026-03-25']), 'E015': (['2026-01-02', '2026-02-24', '2026-04-01', '2026-04-02'], []), 'E001': (['2026-01-19', '2026-01-29', '2026-03-17'], ['2026-01-28', '2026-04-28']), 'E016': (['2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13'], ['2026-03-26', '2026-04-21', '2026-04-24', '2026-04-28']), 'E003': ([], ['2026-01-26', '2026-02-10', '2026-02-13', '2026-02-23', '2026-03-06', '2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-23', '2026-03-31', '2026-04-02', '2026-04-07'])}
-    for em_id, (f, h) in legacy.items():
+    reqs, lg = [], {'E002': (['2026-01-29', '2026-02-26', '2026-03-18', '2026-03-30', '2026-04-16'], []), 'E005': (['2026-03-12', '2026-03-18', '2026-03-27', '2026-04-23'], []), 'E006': (['2026-01-13', '2026-01-16', '2026-01-23', '2026-02-09', '2026-03-05', '2026-03-13'], ['2026-01-09', '2026-01-30', '2026-02-06', '2026-03-03', '2026-03-27']), 'E007': (['2026-01-21', '2026-02-12', '2026-03-02', '2026-03-03', '2026-03-27', '2026-04-20'], ['2026-01-16', '2026-01-19', '2026-01-20', '2026-03-20', '2026-03-23', '2026-04-28']), 'E008': (['2026-04-02', '2026-04-14', '2026-04-15'], ['2026-03-17', '2026-03-20', '2026-03-27', '2026-04-21', '2026-04-28', '2026-04-30']), 'E011': (['2026-03-16', '2026-03-23', '2026-03-30', '2026-04-20'], ['2026-01-16', '2026-02-05', '2026-03-25']), 'E015': (['2026-01-02', '2026-02-24', '2026-04-01', '2026-04-02'], []), 'E001': (['2026-01-19', '2026-01-29', '2026-03-17'], ['2026-01-28', '2026-04-28']), 'E016': (['2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13'], ['2026-03-26', '2026-04-21', '2026-04-24', '2026-04-28']), 'E003': ([], ['2026-01-26', '2026-02-10', '2026-02-13', '2026-02-23', '2026-03-06', '2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-23', '2026-03-31', '2026-04-02', '2026-04-07'])}
+    for em_id, (f, h) in lg.items():
         for d in f: reqs.append({'id': f"L_{em_id}_{d}", 'employeeId': em_id, 'type': '特休', 'date': d, 'shift': '全天', 'days': 1.0, 'status': 'approved', 'isLegacy': True, 'agent': '不需要代理人'})
         for d in h: reqs.append({'id': f"L_{em_id}_H_{d}", 'employeeId': em_id, 'type': '特休', 'date': d, 'shift': '上午', 'days': 0.5, 'status': 'approved', 'isLegacy': True, 'agent': '不需要代理人'})
     st.session_state.requests = reqs
@@ -109,7 +109,7 @@ if st.session_state.view == 'dashboard':
     new_pwd = c_p1.text_input("輸入您想設定的新密碼", type="password", key="new_pwd_input", placeholder="請輸入新密碼...")
     if c_p2.button("💾 確認修改密碼", use_container_width=True, key="change_pwd_btn") and new_pwd:
         next(e for e in st.session_state.employees if e['id'] == u['id'])['password'] = new_pwd
-        st.toast("🎉 密碼修改成功！下次登入請使用新密碼。")
+        st.toast("🎉 密碼修改成功！")
 
 elif st.session_state.view == 'apply':
     is_ed = st.session_state.edit_req_id is not None
@@ -139,4 +139,74 @@ elif st.session_state.view == 'employees' and u['role'] == 'admin':
     for emp in st.session_state.employees:
         emp_used = sum([r['days'] for r in st.session_state.requests if r['employeeId'] == emp['id'] and r['status'] == 'approved' and r['type'] == '特休' and str(st.session_state.selected_year) in r['date']])
         carry = emp['carryOver'] if st.session_state.selected_year == START_YEAR else 0
-        s_data.append({'工號': emp['id'], '姓名': emp['name'], '部門': emp['department'], '年度新假': emp['totalAnnual'], '上年結轉': carry, '總額度': emp['totalAnnual']
+        s_data.append({'工號': emp['id'], '姓名': emp['name'], '部門': emp['department'], '年度新假': emp['totalAnnual'], '上年結轉': carry, '總額度': emp['totalAnnual'] + carry, '已休': emp_used, '剩餘': (emp['totalAnnual'] + carry) - emp_used})
+    st.dataframe(pd.DataFrame(s_data), use_container_width=True)
+    st.write("---")
+    st.markdown("#### 🔍 員工個別請假詳細內容查詢")
+    emp_map = {f"{e['id']} - {e['name']}": e for e in sorted(st.session_state.employees, key=lambda x: x['id'])}
+    sel_q = st.selectbox("選擇要查詢的員工姓名", ["請選擇員工..."] + list(emp_map.keys()), key="q_emp")
+    if sel_q != "請選擇員工...":
+        t_emp = emp_map[sel_q]
+        e_list = [r for r in st.session_state.requests if r['employeeId'] == t_emp['id']]
+        if not e_list: st.info(f"💡 員工 【{t_emp['name']}】 目前尚無請假紀錄。")
+        else:
+            q_df = [{'假別': r['type'], '請假期間': r['date'], '時段': r['shift'], '扣除天數': f"{r['days']} 天", '狀態': {'approved': '🟢 已核准', 'pending': '🟡 待審核', 'rejected': '🔴 已駁回'}.get(r['status'], r['status']), '職務代理人': r['agent']} for r in sorted(e_list, key=lambda x: x['date'], reverse=True)]
+            st.dataframe(pd.DataFrame(q_df), use_container_width=True)
+
+elif st.session_state.view == 'manage' and u['role'] == 'admin':
+    st.markdown("#### 📩 待審核單據管理")
+    p_list = [r for r in st.session_state.requests if r['status'] == 'pending']
+    if not p_list: st.info("🎉 暫無任何需要審核的假單。")
+    else:
+        for r in p_list:
+            emp = next((e for e in st.session_state.employees if e['id'] == r['employeeId']), None)
+            st.write(f"**申請人:** {emp['name']} ｜ **假別:** {r['type']} ｜ **期間:** {r['date']} ({r['shift']} ｜ 共 {r['days']} 天) ｜ **代理人:** {r['agent']}")
+            ca, cr = st.columns(2)
+            if ca.button("✅ 核准", key=f"ok_{r['id']}", use_container_width=True): r['status'] = 'approved'; st.rerun()
+            if cr.button("❌ 駁回", key=f"no_{r['id']}", use_container_width=True): r['status'] = 'rejected'; st.rerun()
+            st.write("---")
+import pandas as pd
+from datetime import datetime, timedelta
+
+st.set_page_config(page_title="欣川豐杰請假系統", page_icon="📊", layout="wide")
+DEFAULT_PASSWORD, START_YEAR = '04698438', 2026
+HOLIDAYS_2026 = {"2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-27", "2026-02-28", "2026-04-02", "2026-04-03", "2026-05-01", "2026-06-19", "2026-06-20", "2026-09-25", "2026-10-09", "2026-10-10"}
+
+def calculate_work_days(s, e, shift):
+    if shift in ['上午', '下午']: return 0.5
+    curr, days = s, 0.0
+    while curr <= e:
+        if curr.weekday() < 5 and curr.strftime("%Y-%m-%d") not in HOLIDAYS_2026: days += 1.0
+        curr += timedelta(days=1)
+    return days
+
+def is_action_allowed(d_str, is_legacy):
+    if is_legacy: return False
+    try: return (datetime.now() - datetime.strptime(d_str.split(" ")[0], "%Y-%m-%d")).days <= 7
+    except: return False
+
+for k, v in [('is_logged_in', False), ('current_user', None), ('view', 'dashboard'), ('selected_year', START_YEAR), ('edit_req_id', None)]:
+    if k not in st.session_state: st.session_state[k] = v
+
+if 'employees' not in st.session_state:
+    st.session_state.employees = [
+        { 'id': 'E001', 'name': '陳秋漢', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 20, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E002', 'name': '楊偉昇', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E003', 'name': '施文吉', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E004', 'name': '黃兩家', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E016', 'name': '蔡秀惠', 'role': 'admin', 'department': '行政部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E005', 'name': '鄭惠蓉', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E006', 'name': '蔡雅菁', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E007', 'name': '呂麗杏', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E008', 'name': '黃嘉銘', 'role': 'employee', 'department': '儀控部', 'totalAnnual': 25, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E009', 'name': '蘇忠泰', 'role': 'employee', 'department': '流量計', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E010', 'name': '葉錦達', 'role': 'employee', 'department': '流量計', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E011', 'name': '陳秋霞', 'role': 'employee', 'department': '流量計', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E012', 'name': '林信佑', 'role': 'employee', 'department': '流量計', 'totalAnnual': 30, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E013', 'name': '宋志銘', 'role': 'employee', 'department': '流量計', 'totalAnnual': 14, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E014', 'name': '王英杰', 'role': 'employee', 'department': '譯碼器', 'totalAnnual': 26, 'carryOver': 0, 'password': DEFAULT_PASSWORD },
+        { 'id': 'E015', 'name': '蘇雅瑄', 'role': 'employee', 'department': '譯碼器', 'totalAnnual': 23, 'carryOver': 0, 'password': DEFAULT_PASSWORD }
+    ]
+
+if 'requests' not in st.session_state:
+    reqs, lg = [], {'E002': (['2026-01-29', '2026-02-26', '2026-03-18', '2026-03-30', '2026-04-16'], []), 'E005': (['2026-03-12', '2026-03-18', '2026-03-27', '2026-04-23'], []), 'E006': (['2026-01-13', '2026-01-16', '2026-01-23', '2026-02-09', '2026-03-05', '2026-03-13'], ['2026-01-09', '2026-01-30', '2026-02-06', '2026-03-03', '2026-03-27']), 'E007': (['2026-01-21', '2026-02-12', '2026-03-02', '2026-03-03', '2026-03-27', '2026-04-20'], ['2026-01-16', '2026-01-19', '2026-01-20', '2026-03-20', '2026-03-23', '2026-04-28']), 'E008': (['2026-04-02', '2026-04-14', '2026-04-15'], ['2026-03-17', '2026-03-20', '2026-03-27', '2026-04-21', '2026-04-28', '2026-04-30']), 'E011': (['2026-03-16', '2026-03-23', '2026-03-30', '2026-04-20'], ['2026-01-16', '2026-02-05', '2026-03-25']), 'E015': (['2026-01-02', '2026-02-24', '2026-04-01', '2026-04-02'], []), 'E001': (
