@@ -33,9 +33,12 @@ def is_action_allowed(date_str, is_legacy):
         return (datetime.now() - leave_date).days <= 7
     except: return False
 
-# --- 初始化 Session State ---
-for k, v in [('is_logged_in', False), ('current_user', None), ('view', 'dashboard'), ('selected_year', START_YEAR), ('edit_req_id', None)]:
-    if k not in st.session_state: st.session_state[k] = v
+# --- 初始化 Session State（修正 view 的預設機制） ---
+if 'is_logged_in' not in st.session_state: st.session_state.is_logged_in = False
+if 'current_user' not in st.session_state: st.session_state.current_user = None
+if 'view' not in st.session_state: st.session_state.view = 'dashboard'
+if 'selected_year' not in st.session_state: st.session_state.selected_year = START_YEAR
+if 'edit_req_id' not in st.session_state: st.session_state.edit_req_id = None
 
 # 16位員工資料
 if 'employees' not in st.session_state:
@@ -73,6 +76,7 @@ if 'requests' not in st.session_state:
         'E016': (['2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13'], ['2026-03-26', '2026-04-21', '2026-04-24', '2026-04-28']),
         'E003': ([], ['2026-01-26', '2026-02-10', '2026-02-13', '2026-02-23', '2026-03-06', '2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-23', '2026-03-31', '2026-04-02', '2026-04-07'])
     }
+    for emp_id, (full, half) in legacy.items(): Full_d = full; half_d = half
     for emp_id, (full, half) in legacy.items():
         for d in full: reqs.append({'id': f"L_{emp_id}_{d}", 'employeeId': emp_id, 'type': '特休', 'date': d, 'shift': '全天', 'days': 1.0, 'status': 'approved', 'isLegacy': True, 'agent': '不需要代理人'})
         for d in half: reqs.append({'id': f"L_{emp_id}_H_{d}", 'employeeId': emp_id, 'type': '特休', 'date': d, 'shift': '上午', 'days': 0.5, 'status': 'approved', 'isLegacy': True, 'agent': '不需要代理人'})
@@ -93,6 +97,7 @@ if not st.session_state.is_logged_in:
                 if password_input == user_data['password']:
                     st.session_state.is_logged_in = True
                     st.session_state.current_user = user_data
+                    st.session_state.view = 'dashboard'
                     st.rerun()
                 else: st.error("密碼驗證失敗。")
         st.caption("💡 預設密碼為 04698438")
@@ -104,15 +109,15 @@ with st.sidebar:
     st.markdown(f"### 🏢 欣川豐杰\n**使用者:** {current_user['name']} ({current_user['department']})")
     st.write("---")
     if st.button("📊 個人功能儀表板", use_container_width=True, key="sb_dash"):
-        st.session_state.view = 'dashboard'; st.session_state.edit_req_id = None
+        st.session_state.view = 'dashboard'; st.session_state.edit_req_id = None; st.rerun()
     if st.button("📝 填寫請假申請單", use_container_width=True, key="sb_apply"):
-        st.session_state.view = 'apply'; st.session_state.edit_req_id = None
+        st.session_state.view = 'apply'; st.session_state.edit_req_id = None; st.rerun()
     if current_user['role'] == 'admin':
         st.write("---")
         st.markdown("<span style='color:#10B981; font-weight:bold;'>🛠️ 管理員控制台</span>", unsafe_allow_html=True)
-        if st.button("👥 全公司特休統計", use_container_width=True, key="sb_stats"): st.session_state.view = 'employees'
+        if st.button("👥 全公司特休統計", use_container_width=True, key="sb_stats"): st.session_state.view = 'employees'; st.rerun()
         p_count = len([r for r in st.session_state.requests if r['status'] == 'pending'])
-        if st.button(f"📩 待辦審核單據 ({p_count})", use_container_width=True, key="sb_mgr"): st.session_state.view = 'manage'
+        if st.button(f"📩 待辦審核單據 ({p_count})", use_container_width=True, key="sb_mgr"): st.session_state.view = 'manage'; st.rerun()
     st.write("---")
     if st.button("🔒 安全登出系統", use_container_width=True, key="sb_logout"):
         st.session_state.is_logged_in = False; st.session_state.current_user = None; st.rerun()
@@ -176,10 +181,10 @@ elif st.session_state.view == 'apply':
                 lbl = f"{l_start.strftime('%Y-%m-%d')} 至 {l_end.strftime('%Y-%m-%d')}" if l_start != l_end else l_start.strftime('%Y-%m-%d')
                 if is_editing and target_req:
                     target_req.update({'type': l_type, 'date': lbl, 'shift': l_shift, 'days': days, 'agent': l_agent, 'status': 'pending'})
-                    st.toast("🎉 假單修改成功，已重新送交審核！")
+                    st.toast("🎉 假單修改成功！")
                 else:
                     st.session_state.requests.append({'id': f"R{int(datetime.now().timestamp())}", 'employeeId': current_user['id'], 'type': l_type, 'date': lbl, 'shift': l_shift, 'days': days, 'status': 'pending', 'isLegacy': False, 'agent': l_agent})
-                    st.toast(f"🎉 請假申請成功！本次共計 **{days}** 天，已送交審核。")
+                    st.toast("🎉 請假申請成功！")
                 st.session_state.edit_req_id = None; st.session_state.view = 'dashboard'; st.rerun()
 
 elif st.session_state.view == 'employees' and current_user['role'] == 'admin':
